@@ -1,4 +1,36 @@
 const std = @import("std");
+const mach = @import("mach");
+const gpu = @import("gpu");
+const glfw = @import("glfw");
+
+var timer: mach.Timer = undefined;
+
+pipeline: *gpu.RenderPipeline,
+
+pub const App = @This();
+
+pub fn init(_: *App, _: *mach.Core) !void {
+    timer = try mach.Timer.start();
+}
+
+pub fn deinit(_: *App, _: *mach.Core) void {}
+
+pub fn update(_: *App, core: *mach.Core) !void {
+    while (core.pollEvent()) |event| {
+        switch (event) {
+            .key_press => |ev| {
+                if (ev.key == .space)
+                    core.close();
+            },
+            else => {},
+        }
+    }
+}
+
+pub fn resize(_: *App, _: *mach.Core, width: u32, height: u32) !void {
+    _ = width;
+    _ = height;
+}
 
 pub fn main() !void {
     // Prints to stderr (it's a shortcut based on `std.io.getStdErr()`)
