@@ -1,5 +1,13 @@
 const std = @import("std");
 const mach = @import("libs/mach/build.zig");
+const Pkg = std.build.Pkg;
+
+const Packages = struct {
+    const zmath = Pkg{
+        .name = "zmath",
+        .source = .{ .path = "libs/zmath/src/zmath.zig" },
+    };
+};
 
 pub fn build(b: *std.build.Builder) !void {
     // Standard target options allows the person running `zig build` to choose
@@ -16,7 +24,7 @@ pub fn build(b: *std.build.Builder) !void {
         .name = "iso-cubes",
         .src = "src/main.zig",
         .target = target,
-        .deps = &[_]std.build.Pkg{},
+        .deps = &.{Packages.zmath},
     });
     app.setBuildMode(mode);
     try app.link(.{});
