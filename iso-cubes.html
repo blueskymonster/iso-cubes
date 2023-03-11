@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<body style="background-color:black">
+
+<canvas id="iso-cubes">Your browser does not support the canvas tag.</canvas>
+
+<script>
+var canvasElement = document.getElementById("iso-cubes");
+const size = 1024;
+canvasElement.width = `${size}`;
+canvasElement.height = `${size}`;
+const o = canvasElement.getContext("2d");
+o.strokeStyle = 'black';
+o.fillStyle = 'black';
+o.lineWidth = 3.0;
+const fillStyles = [];
+const strokeStyles = [];
+const pushStrokeStyle = (strokeStyle) => {
+  strokeStyles.push(o.strokeStyle);
+  o.strokeStyle = strokeStyle;
+}
+const popStrokeStyle = () => {
+  const strokeStyle = strokeStyles.pop();
+  o.strokeStyle = strokeStyle;
+  return strokeStyle;
+}
+const pushFillStyle = (fillStyle) => {
+  fillStyles.push(o.fillStyle);
+  o.fillStyle = fillStyle;
+}
+const popFillStyle = () => {
+  const fillStyle = fillStyles.pop();
+  o.fillStyle = fillStyle;
+  return fillStyle;
+}
+const rawDrawLine = (a, b) => {
+  const [ax, ay] = a;
+  const [bx, by] = b;
+  o.beginPath();
+  o.moveTo(ax, ay);
+  o.lineTo(bx, by);
+  o.stroke();
+}
+const drawBackground = (size) => {
+  pushFillStyle("black");
+  o.fillRect(0, 0, size, size);
+  popFillStyle();
+  pushStrokeStyle("green");
+  const a = [0, 0];
+  const b = [0, size];
+  const c = [size, size];
+  const d = [size, 0];
+  rawDrawLine(a, b);
+  rawDrawLine(b, c);
+  rawDrawLine(c, d);
+  rawDrawLine(d, a);
+  popStrokeStyle();
+};
+const plus = (a, b) => {
+  const [ax, ay] = a;
+  const [bx, by] = b;
+  const c = [ax + bx, ay + by];
+  return c;
+}
+  
+drawBackground(size);
+
+// We can pass (x, y, z) coords to this function
+// and we will automatically get the isometric 2D 
+// projection because the Z coordinate is dropped.
+const drawLine = (a, b) => {
+  const offset = [size / 2, size / 2];
+  rawDrawLine(plus(a, offset), plus(b, offset));
+}
+
+pushStrokeStyle("#FF0000");
+
+const a = [0, 0];
+const b = [128, 128];
+drawLine(a, b);
+
+const c = [-256, -256, -256];
+drawLine(a, c);
+
+/* Our cube datastructure is a list of 8 [x, y, z] points.
+   The order of the points matters because they are used to
+   determine between which points we should be drawing edges.
+   All cubes should derived by rotating and scaling the unitCube.
+*/
+const unitCube = () => {
+  return [
+     [0, 0, 0],
+     [0, 0, 1],
+     [0, 1, 0],
+     [0, 1, 1],
+     [1, 0, 0],
+     [1, 0, 1],
+     [1, 1, 0],
+     [1, 1, 1]
+  ]
+}
+
+const drawCube = (cube) => {
+  const [a, b, c, d, e, f, g, h] = cube;
+  drawLine(a, b);
+  drawLine(b, d);
+  drawLine(d, c);
+  drawLine(c, a);
+  drawLine(e, f);
+  drawLine(f, h);
+  drawLine(h, g);
+  drawLine(g, e);
+  drawLine(a, e);
+  drawLine(c, g);
+  drawLine(b, f);
+  drawLine(d, h);
+}
+
+
+</script>
+
+</body>
+</html>
+
