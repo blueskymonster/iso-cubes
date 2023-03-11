@@ -6,9 +6,9 @@
 
 <script>
 var canvasElement = document.getElementById("iso-cubes");
-const size = 1024;
-canvasElement.width = `${size}`;
-canvasElement.height = `${size}`;
+const canvasSize = 1024;
+canvasElement.width = `${canvasSize}`;
+canvasElement.height = `${canvasSize}`;
 const o = canvasElement.getContext("2d");
 o.strokeStyle = 'black';
 o.fillStyle = 'black';
@@ -41,81 +41,154 @@ const rawDrawLine = (a, b) => {
   o.lineTo(bx, by);
   o.stroke();
 }
-const drawBackground = (size) => {
+const drawBackground = () => {
   pushFillStyle("black");
-  o.fillRect(0, 0, size, size);
+  o.fillRect(0, 0, canvasSize, canvasSize);
   popFillStyle();
   pushStrokeStyle("green");
   const a = [0, 0];
-  const b = [0, size];
-  const c = [size, size];
-  const d = [size, 0];
+  const b = [0, canvasSize];
+  const c = [canvasSize, canvasSize];
+  const d = [canvasSize, 0];
   rawDrawLine(a, b);
   rawDrawLine(b, c);
   rawDrawLine(c, d);
   rawDrawLine(d, a);
   popStrokeStyle();
 };
-const plus = (a, b) => {
-  const [ax, ay] = a;
-  const [bx, by] = b;
-  const c = [ax + bx, ay + by];
-  return c;
+const Vec = {
+  plus: (a, b) => {
+    const length = Math.max(a.length, b.length);
+    const c = [];
+    for (var i = 0; i < length; i++) {
+      c.push((a[i] || 0) + (b[i] || 0));
+    }
+    return c;
+  },
+  scalarMul: (a, s) => a.map((ai) => ai * s),
 }
-  
-drawBackground(size);
 
+  
 // We can pass (x, y, z) coords to this function
 // and we will automatically get the isometric 2D 
 // projection because the Z coordinate is dropped.
 const drawLine = (a, b) => {
-  const offset = [size / 2, size / 2];
-  rawDrawLine(plus(a, offset), plus(b, offset));
+  const offset = [canvasSize / 2, canvasSize/ 2];
+  rawDrawLine(Vec.plus(a, offset), Vec.plus(b, offset));
 }
+
+
+const Cube = {
+  /* Our cube datastructure is a list of 8 [x, y, z] points.
+     The order of the points matters because they are used to
+     determine between which points we should be drawing edges.
+     All cubes should derived by rotating and scaling the unitCube.
+  */
+  unit: () => {
+    return [
+       [0, 0, 0],
+       [0, 0, 1],
+       [0, 1, 0],
+       [0, 1, 1],
+       [1, 0, 0],
+       [1, 0, 1],
+       [1, 1, 0],
+       [1, 1, 1]
+    ]
+  },
+  draw: (cube) => {
+    const [a, b, c, d, e, f, g, h] = cube;
+    drawLine(a, b);
+    drawLine(b, d);
+    drawLine(d, c);
+    drawLine(c, a);
+    drawLine(e, f);
+    drawLine(f, h);
+    drawLine(h, g);
+    drawLine(g, e);
+    drawLine(a, e);
+    drawLine(c, g);
+    drawLine(b, f);
+    drawLine(d, h);
+  },
+  scale: (cube, scaleFactor) => cube.map((p) => Vec.scalarMul(p, scaleFactor)),
+  translate: (cube, translation) => cube.map((p) => Vec.plus(p, translation)),
+  cUnit: () => Cube.translate(Cube.unit(), [-0.5, -0.5, -0.5]),
+  rotateX: (cube, theta) => {
+    return cube.map((p) => {
+      const [x, y, z] = p;
+      return [
+	x, 
+	Math.cos(theta) * y - Math.sin(theta) * z,
+	Math.sin(theta) * y + Math.cos(theta) * z
+      ];
+    });
+  },
+  rotateY: (cube, theta) => {
+    return cube.map((p) => {
+      const [x, y, z] = p;
+      return [
+	Math.cos(theta) * x + Math.sin(theta) * z, 
+	y,
+	Math.cos(theta) * z - Math.sin(theta) * x
+      ]; 
+    });
+  },
+  rotateZ: (cube, theta) => {
+    return cube.map((p) => {
+      const [x, y, z] = p;
+      return [
+	Math.cos(theta) * x - Math.sin(theta) * y, 
+	Math.sin(theta) * x + Math.cos(theta) * y,
+	z
+      ];
+    });
+  },
+};
 
 pushStrokeStyle("#FF0000");
 
-const a = [0, 0];
-const b = [128, 128];
-drawLine(a, b);
+let startTS, previousTS;
+const animationSpeed = 8; // bigger is slower
+let mainCubeRotation = [0, 0, 0];
 
-const c = [-256, -256, -256];
-drawLine(a, c);
+const draw = (ts) => {
+  if (startTS === undefined) {
+    startTS = ts;
+    previousTS = ts;
+  }
+  const totalElapsed = ts - startTS;
+  const frameElapsed = ts - previousTS;
 
-/* Our cube datastructure is a list of 8 [x, y, z] points.
-   The order of the points matters because they are used to
-   determine between which points we should be drawing edges.
-   All cubes should derived by rotating and scaling the unitCube.
-*/
-const unitCube = () => {
-  return [
-     [0, 0, 0],
-     [0, 0, 1],
-     [0, 1, 0],
-     [0, 1, 1],
-     [1, 0, 0],
-     [1, 0, 1],
-     [1, 1, 0],
-     [1, 1, 1]
-  ]
+  if (previousTS !== ts) {
+    o.clearRect(0, 0, canvasSize, canvasSize);
+    drawBackground();
+    let rotationFunc;
+    switch (Math.floor(totalElapsed / 500) % 3) {
+      case 0: { 
+        mainCubeRotation = Vec.plus(mainCubeRotation, [frameElapsed / 1000, 0, 0]);
+	break;
+      }
+      case 1: { 
+        mainCubeRotation = Vec.plus(mainCubeRotation, [0, frameElapsed / 1000, 0]);
+	break;
+      }
+      case 2: { 
+        mainCubeRotation = Vec.plus(mainCubeRotation, [0, 0, frameElapsed / 1000]);
+	break;
+      }
+      default: { break; }
+    };
+    const cube = Cube.scale(Cube.cUnit(), 100);
+    let rotatedCube = Cube.rotateX(cube, mainCubeRotation[0]);
+    rotatedCube = Cube.rotateY(rotatedCube, mainCubeRotation[1]);
+    rotatedCube = Cube.rotateZ(rotatedCube, mainCubeRotation[2]);
+    Cube.draw(rotatedCube);
+  }
+  previousTS = ts;
+  window.requestAnimationFrame(draw);
 }
-
-const drawCube = (cube) => {
-  const [a, b, c, d, e, f, g, h] = cube;
-  drawLine(a, b);
-  drawLine(b, d);
-  drawLine(d, c);
-  drawLine(c, a);
-  drawLine(e, f);
-  drawLine(f, h);
-  drawLine(h, g);
-  drawLine(g, e);
-  drawLine(a, e);
-  drawLine(c, g);
-  drawLine(b, f);
-  drawLine(d, h);
-}
-
+window.requestAnimationFrame(draw);
 
 </script>
 
