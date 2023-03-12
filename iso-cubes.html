@@ -144,6 +144,12 @@ const Cube = {
       ];
     });
   },
+  rotate: (cube, r) => {
+   const [rx, ry, rz] = r;
+   let rc = Cube.rotateX(cube, rx);
+   rc = Cube.rotateY(rc, ry);
+   return Cube.rotateZ(rc, rz);
+  },
 };
 
 pushStrokeStyle("#FF0000");
@@ -163,26 +169,17 @@ const draw = (ts) => {
   if (previousTS !== ts) {
     o.clearRect(0, 0, canvasSize, canvasSize);
     drawBackground();
-    let rotationFunc;
-    switch (Math.floor(totalElapsed / 500) % 3) {
-      case 0: { 
-        mainCubeRotation = Vec.plus(mainCubeRotation, [frameElapsed / 1000, 0, 0]);
-	break;
-      }
-      case 1: { 
-        mainCubeRotation = Vec.plus(mainCubeRotation, [0, frameElapsed / 1000, 0]);
-	break;
-      }
-      case 2: { 
-        mainCubeRotation = Vec.plus(mainCubeRotation, [0, 0, frameElapsed / 1000]);
-	break;
-      }
-      default: { break; }
-    };
+    const rSpeed = 0.005;
+    mainCubeRotation = Vec.plus(
+      mainCubeRotation, 
+      [
+        rSpeed * Math.sin(frameElapsed / 1000) * Math.PI * 2,
+        rSpeed * Math.cos(frameElapsed / 1000) * Math.PI * 2,
+        rSpeed * (Math.sin(frameElapsed / 1000) - Math.cos(frameElapsed / 1000)) * Math.PI * 2
+      ]
+    );
     const cube = Cube.scale(Cube.cUnit(), 100);
-    let rotatedCube = Cube.rotateX(cube, mainCubeRotation[0]);
-    rotatedCube = Cube.rotateY(rotatedCube, mainCubeRotation[1]);
-    rotatedCube = Cube.rotateZ(rotatedCube, mainCubeRotation[2]);
+    const rotatedCube = Cube.rotate(cube, mainCubeRotation);
     Cube.draw(rotatedCube);
   }
   previousTS = ts;
