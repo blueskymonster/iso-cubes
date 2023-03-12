@@ -152,40 +152,252 @@ const Cube = {
   },
 };
 
-pushStrokeStyle("#FF0000");
 
-let startTS, previousTS;
-const animationSpeed = 8; // bigger is slower
-let mainCubeRotation = [0, 0, 0];
+let startTS, previousTS, totalElapsed, frameElapsed;
 
-const draw = (ts) => {
-  if (startTS === undefined) {
-    startTS = ts;
+const tsWrap = (f) => {
+  const tsWrappedF = (ts) => {
+    if (startTS === undefined) {
+      startTS = ts;
+      previousTS = ts;
+    }
+    totalElapsed = ts - startTS;
+    frameElapsed = ts - previousTS;
+    let next = f;
+    if (previousTS !== ts) {
+      o.clearRect(0, 0, canvasSize, canvasSize);
+      drawBackground();
+      next = f(ts);
+      if ("wait" in next) {
+	const { wait, nextF } = next;
+        setTimeout(() => {
+	  previousTS += wait;
+          window.requestAnimationFrame(tsWrap(nextF || idleRotatingCube));
+	}, wait);
+	return;
+      }
+      if (next === undefined) {
+        next = idleRotatingCube;
+      }
+    }
     previousTS = ts;
+    window.requestAnimationFrame(tsWrap(next));
   }
-  const totalElapsed = ts - startTS;
-  const frameElapsed = ts - previousTS;
-
-  if (previousTS !== ts) {
-    o.clearRect(0, 0, canvasSize, canvasSize);
-    drawBackground();
-    const rSpeed = 0.005;
-    mainCubeRotation = Vec.plus(
-      mainCubeRotation, 
-      [
-        rSpeed * Math.sin(frameElapsed / 1000) * Math.PI * 2,
-        rSpeed * Math.cos(frameElapsed / 1000) * Math.PI * 2,
-        rSpeed * (Math.sin(frameElapsed / 1000) - Math.cos(frameElapsed / 1000)) * Math.PI * 2
-      ]
-    );
-    const cube = Cube.scale(Cube.cUnit(), 100);
-    const rotatedCube = Cube.rotate(cube, mainCubeRotation);
-    Cube.draw(rotatedCube);
-  }
-  previousTS = ts;
-  window.requestAnimationFrame(draw);
+  return tsWrappedF;
 }
-window.requestAnimationFrame(draw);
+
+const cubeSize = 176;
+const animationUnitDuration = 5000;
+
+let idleCubeRotation = [0, 0, 0];
+const idleRotatingCube = (ts) => {
+  const rSpeed = 0.005;
+  idleCubeRotation = Vec.plus(
+    idleCubeRotation, 
+    [
+      rSpeed * Math.sin(frameElapsed / 1000) * Math.PI * 2,
+      rSpeed * Math.cos(frameElapsed / 1000) * Math.PI * 2,
+      rSpeed * (Math.sin(frameElapsed / 1000) - Math.cos(frameElapsed / 1000)) * Math.PI * 2
+    ]
+  );
+  const cube = Cube.scale(Cube.cUnit(), cubeSize);
+  const rotatedCube = Cube.rotate(cube, idleCubeRotation);
+  Cube.draw(rotatedCube);
+  return idleRotatingCube;
+}
+
+const centeredCubeWait = (wait) => {
+  return (ts) => {
+    const cube = Cube.scale(Cube.cUnit(), cubeSize);
+    Cube.draw(cube);
+    return {
+      wait,
+      nextF: zRotateSingleCube
+    };
+  };
+}
+
+let zRotateSingleCubeProgress = 0;
+const zRotateSingleCubeDuration = animationUnitDuration;
+const zRotateSingleCube = (ts) => {
+  zRotateSingleCubeProgress += frameElapsed / zRotateSingleCubeDuration;
+  zRotateSingleCubeProgress = Math.min(zRotateSingleCubeProgress, 1);
+  const cube = Cube.scale(Cube.cUnit(), cubeSize);
+  const thetaZ = -Math.PI * 0.5 * zRotateSingleCubeProgress;
+  const rotatedCube = Cube.rotateZ(cube, thetaZ);
+  Cube.draw(rotatedCube);
+  if (zRotateSingleCubeProgress === 1) {
+    zRotateSingleCubeProgress = 0;
+    return {
+      wait: 1000,
+      nextF: yRotateSingleCube
+    };
+  }
+  return zRotateSingleCube;
+}
+
+let yRotateSingleCubeProgress = 0;
+const yRotateSingleCubeDuration = animationUnitDuration;
+const yRotateSingleCube = (ts) => {
+  yRotateSingleCubeProgress += frameElapsed / yRotateSingleCubeDuration;
+  yRotateSingleCubeProgress = Math.min(yRotateSingleCubeProgress, 1);
+  const cube = Cube.scale(Cube.cUnit(), cubeSize);
+  const thetaY = -Math.PI * 0.5 * yRotateSingleCubeProgress;
+  const rotatedCube = Cube.rotateY(cube, thetaY);
+  Cube.draw(rotatedCube);
+  if (yRotateSingleCubeProgress === 1) {
+    yRotateSingleCubeProgress = 0;
+    return {
+      wait: 1000,
+      nextF: xRotateSingleCube
+    };
+  }
+  return yRotateSingleCube;
+}
+
+let xRotateSingleCubeProgress = 0;
+const xRotateSingleCubeDuration = animationUnitDuration;
+const xRotateSingleCube = (ts) => {
+  xRotateSingleCubeProgress += frameElapsed / xRotateSingleCubeDuration;
+  xRotateSingleCubeProgress = Math.min(xRotateSingleCubeProgress, 1);
+  const cube = Cube.scale(Cube.cUnit(), cubeSize);
+  const thetaX = -Math.PI * 0.5 * xRotateSingleCubeProgress;
+  const rotatedCube = Cube.rotateX(cube, thetaX);
+  Cube.draw(rotatedCube);
+  if (xRotateSingleCubeProgress === 1) {
+    xRotateSingleCubeProgress = 0;
+    return {
+      wait: 1000,
+      nextF: symmetrySingleCube,
+    };
+  }
+  return xRotateSingleCube;
+}
+
+let symmetrySingleCubeProgress = 0;
+let symmetrySingleCubeStage = 1;
+let symmetrySingleCubeStages = 4
+const symmetrySingleCubeDuration = animationUnitDuration * symmetrySingleCubeStages;
+const symmetrySingleCube = (ts) => {
+  symmetrySingleCubeProgress += frameElapsed / symmetrySingleCubeDuration;
+  symmetrySingleCubeProgress = Math.min(symmetrySingleCubeProgress, symmetrySingleCubeStage / symmetrySingleCubeStages);
+  const cube = Cube.scale(Cube.cUnit(), cubeSize);
+  let [thetaX, thetaY, thetaZ] = [0, 0, 0];
+  let rotatedCube;
+  switch (symmetrySingleCubeStage) {
+    case (1):
+      thetaY = -Math.PI * 0.25 * (symmetrySingleCubeProgress * symmetrySingleCubeStages);
+      rotatedCube = Cube.rotateY(cube, thetaY);
+      Cube.draw(rotatedCube);
+      if (symmetrySingleCubeProgress >= 1/symmetrySingleCubeStages) {
+	symmetrySingleCubeStage = 2;
+	return {
+	  wait: 1000,
+	  nextF: symmetrySingleCube,
+	};
+      }
+      return symmetrySingleCube;
+    case (2):
+      thetaY = -Math.PI * 0.25;
+      rotatedCube = Cube.rotateY(cube, thetaY);
+      thetaX = (Math.atan(-Math.sqrt(2) / 2)) * ((symmetrySingleCubeProgress - 1/symmetrySingleCubeStages) * symmetrySingleCubeStages);
+      rotatedCube = Cube.rotateX(rotatedCube, thetaX);
+      Cube.draw(rotatedCube);
+      if (symmetrySingleCubeProgress >= 2/symmetrySingleCubeStages) {
+        symmetrySingleCubeStage = 4;
+	return {
+	  wait: 1000,
+	  nextF: symmetrySingleCube,
+	}
+      }
+      return symmetrySingleCube;
+    case (4):
+      thetaY = -Math.PI * 0.25;
+      rotatedCube = Cube.rotateY(cube, thetaY);
+      thetaX = Math.atan(-Math.sqrt(2) / 2);
+      rotatedCube = Cube.rotateX(rotatedCube, thetaX);
+      thetaY = -Math.PI * 0.5 * ((symmetrySingleCubeProgress - 2/symmetrySingleCubeStages) * symmetrySingleCubeStages);
+      rotatedCube = Cube.rotateY(rotatedCube, thetaY);
+      Cube.draw(rotatedCube);
+      if (symmetrySingleCubeProgress >= 1) {
+	symmetrySingleCubeStage = 1;
+	symmetrySingleCubeProgress = 0;
+        return {
+          wait: 1000,
+	  nextF: tiltedSymmetryExpansion
+        }
+      }
+      return symmetrySingleCube;
+  };
+}
+
+const cubeChoose = [-1, 0, 1];
+const expandedCubeDisplacements = [];
+for (const x of cubeChoose) {
+  for (const y of cubeChoose) {
+    for (const z of cubeChoose) {
+      expandedCubeDisplacements.push([x, y, z]);
+    }
+  }
+}
+
+
+const tiltThetaY = -Math.PI * 0.25;
+const tiltThetaX = Math.atan(-Math.sqrt(2) / 2);
+const tiltCube = (cube) => {
+  const yRotatedCube = Cube.rotateY(cube, tiltThetaY);
+  return Cube.rotateX(yRotatedCube, tiltThetaX);
+}
+
+let tiltedSymmetryExpansionProgress = 0;
+const tiltedSymmetryExpansionDuration = animationUnitDuration * 4;
+const tiltedSymmetryExpansion = (ts) => {
+  tiltedSymmetryExpansionProgress += frameElapsed / tiltedSymmetryExpansionDuration;
+  tiltedSymmetryExpansionProgress = Math.min(tiltedSymmetryExpansionProgress, 1);
+  const displacementAmplitude = cubeSize * tiltedSymmetryExpansionProgress;
+  const cube = Cube.scale(Cube.cUnit(), cubeSize);
+  expandedCubeDisplacements.forEach(cubeDisplacement => {
+    const displacement = Vec.scalarMul(cubeDisplacement, displacementAmplitude);
+    const translatedCube = Cube.translate(cube, displacement);
+    const tiltedCube = tiltCube(translatedCube);
+    Cube.draw(tiltedCube);
+  });
+  if (tiltedSymmetryExpansionProgress === 1) {
+    tiltedSymmetryExpansionProgress = 0;
+    return {
+      wait: 1000,
+      nextF: tiltedSymmetryYRotate
+    }
+  }
+  return tiltedSymmetryExpansion;
+}
+
+let tiltedSymmetryYRotateProgress = 0;
+const tiltedSymmetryYRotateDuration = animationUnitDuration * 4;
+const tiltedSymmetryYRotate = (ts) => {
+  tiltedSymmetryYRotateProgress += frameElapsed / tiltedSymmetryYRotateDuration;
+  tiltedSymmetryYRotateProgress = Math.min(tiltedSymmetryYRotateProgress, 1);
+  const cube = Cube.scale(Cube.cUnit(), cubeSize);
+  const thetaY = -Math.PI * tiltedSymmetryYRotateProgress;
+  expandedCubeDisplacements.forEach(cubeDisplacement => {
+    const translatedCube = Cube.translate(cube, Vec.scalarMul(cubeDisplacement, cubeSize));
+    const tiltedCube = tiltCube(translatedCube);
+    const yRotatedCube = Cube.rotateY(tiltedCube, thetaY);
+    Cube.draw(yRotatedCube);
+  });
+  if (tiltedSymmetryYRotateProgress === 1) {
+    tiltedSymmetryYRotateProgress = 0;
+    return {
+      wait: 10000,
+    }
+  }
+  return tiltedSymmetryYRotate;
+}
+
+const startingAnimation = centeredCubeWait(5000);
+
+pushStrokeStyle("#FF0000");
+window.requestAnimationFrame(tsWrap(startingAnimation));
 
 </script>
 
