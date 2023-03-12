@@ -45,7 +45,7 @@ const drawBackground = () => {
   pushFillStyle("black");
   o.fillRect(0, 0, canvasSize, canvasSize);
   popFillStyle();
-  pushStrokeStyle("green");
+  pushStrokeStyle("#002288");
   const a = [0, 0];
   const b = [0, canvasSize];
   const c = [canvasSize, canvasSize];
@@ -396,7 +396,7 @@ const tiltedSymmetryYRotate = (ts) => {
 
 const startingAnimation = centeredCubeWait(5000);
 
-pushStrokeStyle("#FF0000");
+pushStrokeStyle("magenta");
 window.requestAnimationFrame(tsWrap(startingAnimation));
 
 </script>
