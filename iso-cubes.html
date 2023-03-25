@@ -152,6 +152,76 @@ const Cube = {
   },
 };
 
+const Hypercube = {
+  /* Our hypercube datastructure is a list of 16 [x, y, z, w] points.
+     The order of the points matters because they are used to
+     determine between which points we should be drawing edges.
+     All hypercubes should derived by rotating and scaling the unitHypercube.
+  */
+  unit: () => [
+    [0, 0, 0, 0],
+    [0, 0, 0, 1],
+    [0, 0, 1, 0],
+    [0, 0, 1, 1],
+    [0, 1, 0, 0],
+    [0, 1, 0, 1],
+    [0, 1, 1, 0],
+    [0, 1, 1, 1],
+    [1, 0, 0, 0],
+    [1, 0, 0, 1],
+    [1, 0, 1, 0],
+    [1, 0, 1, 1],
+    [1, 1, 0, 0],
+    [1, 1, 0, 1],
+    [1, 1, 1, 0],
+    [1, 1, 1, 1],
+  ],
+  draw: (hypercube) => {
+    const [a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p] = hypercube;
+    const edges = [
+      [a,c],
+      [c,g],
+      [g,e],
+      [e,a],
+      [i,k],
+      [k,o],
+      [o,m],
+      [m,i],
+      [a,i],
+      [e,m],
+      [c,k],
+      [g,o],
+      [b,d],
+      [d,h],
+      [h,f],
+      [f,b],
+      [j,l],
+      [l,p],
+      [p,n],
+      [n,j],
+      [b,j],
+      [f,n],
+      [d,l],
+      [h,p],
+      [a,b],
+      [c,d],
+      [e,f],
+      [g,h],
+      [i,j],
+      [k,l],
+      [m,n],
+      [o,p],
+    ];
+    for (const edge of edges) {
+      const [pointA, pointB] = edge;
+      drawLine(pointA, pointB);
+    }
+  },
+
+
+  
+};
+
 
 let startTS, previousTS, totalElapsed, frameElapsed;
 
