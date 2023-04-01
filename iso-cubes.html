@@ -217,14 +217,79 @@ const Hypercube = {
       drawLine(pointA, pointB);
     }
   },
-
-
-  
+  scale: Cube.scale,
+  translate: Cube.translate,
+  cUnit: () => Hypercube.translate(Hypercube.unit(), [-0.5, -0.5, -0.5, -0.5]),
+  rotateXY: (hcube, theta) => {
+    return hcube.map((p) => {
+      const [x, y, z, w] = p;
+      return [
+        x,
+	y,
+	Math.cos(theta) * z - Math.sin(theta) * w,
+	Math.sin(theta) * z + Math.cos(theta) * w,
+      ];
+    });
+  },
+  rotateXZ: (hcube, theta) => {
+    return hcube.map((p) => {
+      const [x, y, z, w] = p;
+      return [
+        x,
+	Math.cos(theta) * y - Math.sin(theta) * w,
+	z,
+        Math.sin(theta) * y + Math.cos(theta) * w,
+      ];
+    });
+  },
+  rotateXW: (hcube, theta) => {
+    return hcube.map((p) => {
+      const [x, y, z, w] = p;
+      return [
+        x,
+        Math.cos(theta) * y - Math.sin(theta) * z,
+        Math.sin(theta) * y + Math.cos(theta) * z,
+	w,
+      ];	
+    });
+  },
+  rotateYZ: (hcube, theta) => {
+    return hcube.map((p) => {
+      const [x, y, z, w] = p;
+      return [
+        Math.cos(theta) * x - Math.sin(theta) * w,
+        y,
+        z,
+        Math.sin(theta) * x + Math.cos(theta) * w,
+      ];
+    });
+  },
+  rotateYW: (hcube, theta) => {
+    return hcube.map((p) => {
+      const [x, y, z, w] = p;
+      return [
+        Math.cos(theta) * x - Math.sin(theta) * z,
+        y,
+        Math.sin(theta) * x + Math.cos(theta) * z,
+        w,
+      ];
+    });
+  },
+  rotateZW: (hcube, theta) => {
+    return hcube.map((p) => {
+      const [x, y, z, w] = p;
+      return [
+        Math.cos(theta) * x - Math.sin(theta) * y,
+        Math.sin(theta) * x + Math.cos(theta) * y,
+        z,
+        w,
+      ];
+    });
+  },
 };
 
 
 let startTS, previousTS, totalElapsed, frameElapsed;
-
 const tsWrap = (f) => {
   const tsWrappedF = (ts) => {
     if (startTS === undefined) {
@@ -462,9 +527,84 @@ const tiltedSymmetryYRotate = (ts) => {
     }
   }
   return tiltedSymmetryYRotate;
-}
+};
 
-const startingAnimation = centeredCubeWait(5000);
+let symOneHcubeProgress = 0;
+let symOneHcubeStage = 1;
+let symOneHcubeStages = 8;
+const symOneHcubeDuration = animationUnitDuration * symOneHcubeStages;
+const symOneHcube = (ts) => {
+  symOneHcubeProgress += frameElapsed / symOneHcubeDuration;
+  symOneHcubeProgress = Math.min(symOneHcubeProgress, symOneHcubeStage / symOneHcubeStages);
+  const hcube = Hypercube.scale(Hypercube.cUnit(), cubeSize);
+  const [maxThetaYZ, maxThetaXZ, maxThetaYW, maxThetaXW] = [
+    -Math.PI * 0.25,
+    Math.atan(-Math.sqrt(2) / 2),
+    -Math.PI * 0.25,
+    Math.atan(-Math.sqrt(2) / 2),
+  ];
+  let rotatedHcube = hcube;
+  switch (symOneHcubeStage) {
+    case (1):
+      const thetaYZ = maxThetaYZ * (symOneHcubeProgress * symOneHcubeStages);
+      rotatedHcube = Hypercube.rotateYZ(rotatedHcube, thetaYZ);
+      Hypercube.draw(rotatedHcube);
+      if (symOneHcubeProgress >= 1 / symOneHcubeStages) {
+        symOneHcubeStage = 2;
+        return {
+          wait: 1000,
+          nextF: symOneHcube,
+        }
+      }
+      return symOneHcube;
+    case (2):
+      rotatedHcube = Hypercube.rotateYZ(rotatedHcube, maxThetaYZ);
+      const thetaXZ = maxThetaXZ * ((symOneHcubeProgress - 1/symOneHcubeStages) * symOneHcubeStages);
+      rotatedHcube = Hypercube.rotateXZ(rotatedHcube, thetaXZ);
+      Hypercube.draw(rotatedHcube);
+      if (symOneHcubeProgress >= 2/symOneHcubeStages) {
+        symOneHcubeStage = 4;
+        return {
+          wait: 1000,
+          nextF: symOneHcube,
+        }
+      }
+      return symOneHcube;
+    case (4):
+      rotatedHcube = Hypercube.rotateYZ(rotatedHcube, maxThetaYZ);
+      rotatedHcube = Hypercube.rotateXZ(rotatedHcube, maxThetaXZ);
+      const thetaYW = maxThetaYW * ((symOneHcubeProgress - 2/symOneHcubeStages) * symOneHcubeStages / 2);
+      rotatedHcube = Hypercube.rotateYW(rotatedHcube, thetaYW);
+      Hypercube.draw(rotatedHcube);
+      if (symOneHcubeProgress >= 4/symOneHcubeStages) {
+        symOneHcubeStage = 6;
+	return {
+          wait: 1000,
+          nextF: symOneHcube,
+        }
+      }
+      return symOneHcube;
+    case (6):
+      rotatedHcube = Hypercube.rotateYZ(rotatedHcube, maxThetaYZ);
+      rotatedHcube = Hypercube.rotateXZ(rotatedHcube, maxThetaXZ);
+      rotatedHcube = Hypercube.rotateYW(rotatedHcube, maxThetaYW);
+      const thetaXW = maxThetaXW * ((symOneHcubeProgress - 4/symOneHcubeStages) * symOneHcubeStages / 2);
+      rotatedHcube = Hypercube.rotateXW(rotatedHcube, thetaXW);
+      Hypercube.draw(rotatedHcube);
+      if (symOneHcubeProgress >= 6/symOneHcubeStages) {
+        symOneHcubeStage = 8;
+	return {
+          wait: 1000,
+          nextF: symOneHcube,
+        }
+      }
+      return symOneHcube;
+  }
+};
+
+
+//const startingAnimation = centeredCubeWait(5000);
+const startingAnimation = symOneHcube;
 
 pushStrokeStyle("magenta");
 window.requestAnimationFrame(tsWrap(startingAnimation));
